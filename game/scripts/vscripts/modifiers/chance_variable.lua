@@ -16,21 +16,13 @@ function chance_variable:GetAttributes()
 	return MODIFIER_ATTRIBUTE_PERMANENT
 end
 
-function chance_variable:DeclareFunctions()
-	if IsServer() then
-		return {
-			MODIFIER_PROPERTY_TOTALDAMAGEOUTGOING_PERCENTAGE
-		}
-	end
-end
-
 function chance_variable:OnCreated(event)
 	if IsServer() then
 		self.accumulated_damage = 0
 		self:StartIntervalThink(20)
 
 		if self:GetParent():IsRangedAttacker() then
-			self:SetStackCount(2)
+			self:SetStackCount(10)
 		else
 			self:SetStackCount(15)
 		end
@@ -42,13 +34,13 @@ function chance_variable:OnIntervalThink()
 	local crit_ramp
 
 	if self:GetParent():IsRangedAttacker() then
-		crit_base = 2
-		crit_ramp = 10/8000
+		crit_base = 10
+		crit_ramp = 30/8000
 	else
 		crit_base = 15
 		crit_ramp = 45/8000
 	end
 
-	self:SetStackCount(crit_base + crit_ramp * self.accumulated_damage)
+	self:SetStackCount(math.min(crit_base + crit_ramp * self.accumulated_damage, 100))
 	self.accumulated_damage = 0
 end

@@ -35,7 +35,7 @@ function Filters:BountyRunePickupFilter(event)
 	return true
 end
 
-local gamemode = GameRules:GetGameModeEntity()
+
 function Filters:DamageFilter(event)
 	-- PrintTable(event)
 	local attackerUnit = event.entindex_attacker_const and EntIndexToHScript(event.entindex_attacker_const)
@@ -46,20 +46,30 @@ function Filters:DamageFilter(event)
 	
 	if victimUnit:IsBuilding() then return true end
 
-	if attackerUnit:IsHero() and not attackerUnit:IsIllusion() then
+	if attackerUnit and attackerUnit:IsHero() and not attackerUnit:IsIllusion() then
 		local crit_chance_holder = attackerUnit:FindModifierByName("chance_variable")
 		
 		if RollPercentage(crit_chance_holder:GetStackCount()) then
-			gamemode:EmitSoundOnClient("crit_deal", attackerUnit:GetPlayerOwner())
+			EmitSoundOnEntityForPlayer("crit_deal", victimUnit, attackerUnit:GetPlayerOwnerID())
 			damage_multiplier = (BUTTINGS.CRIT_DAMAGE_BASE + BUTTINGS.CRIT_DAMAGE_INCREASE_PER_LEVEL * attackerUnit:GetLevel()) / 100
 		end
 
 		crit_chance_holder.accumulated_damage = crit_chance_holder.accumulated_damage + event.damage * damage_multiplier
+	else
+		if attackerUnit and RollPercentage(50) then
+			EmitSoundOnEntityForPlayer("crit_deal", victimUnit, attackerUnit:GetPlayerOwnerID())
+			damage_multiplier = BUTTINGS.CRIT_DAMAGE_BASE / 100
+		end
 	end
 
 	if damage_multiplier > 1 then
 		event.damage = event.damage * damage_multiplier
+		victimUnit:EmitSound("DOTA_Item.Daedelus.Crit")
 		SendOverheadEventMessage(nil, OVERHEAD_ALERT_CRITICAL, victimUnit, event.damage, nil)
+
+		if victimUnit:IsHero() and not victimUnit:IsIllusion() then
+			EmitSoundOnEntityForPlayer("crit_receive", victimUnit, victimUnit:GetPlayerOwnerID())
+		end
 	end
 
 	return true
