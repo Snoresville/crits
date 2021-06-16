@@ -35,15 +35,32 @@ function Filters:BountyRunePickupFilter(event)
 	return true
 end
 
+local gamemode = GameRules:GetGameModeEntity()
 function Filters:DamageFilter(event)
 	-- PrintTable(event)
 	local attackerUnit = event.entindex_attacker_const and EntIndexToHScript(event.entindex_attacker_const)
 	local victimUnit = event.entindex_victim_const and EntIndexToHScript(event.entindex_victim_const)
 	local damageType = event.damagetype_const
 	local damage = event.damage -- can not get modified with local
+	local damage_multiplier = 1
+	
+	if victimUnit:IsBuilding() then return true end
 
-	-- --  example
-		-- event.damage = 10
+	if attackerUnit:IsHero() and not attackerUnit:IsIllusion() then
+		local crit_chance_holder = attackerUnit:FindModifierByName("chance_variable")
+		
+		if RollPercentage(crit_chance_holder:GetStackCount()) then
+			gamemode:EmitSoundOnClient("crit_deal", attackerUnit:GetPlayerOwner())
+			damage_multiplier = (BUTTINGS.CRIT_DAMAGE_BASE + BUTTINGS.CRIT_DAMAGE_INCREASE_PER_LEVEL * attackerUnit:GetLevel()) / 100
+		end
+
+		crit_chance_holder.accumulated_damage = crit_chance_holder.accumulated_damage + event.damage * damage_multiplier
+	end
+
+	if damage_multiplier > 1 then
+		event.damage = event.damage * damage_multiplier
+		SendOverheadEventMessage(nil, OVERHEAD_ALERT_CRITICAL, victimUnit, event.damage, nil)
+	end
 
 	return true
 end
